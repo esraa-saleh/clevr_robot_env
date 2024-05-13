@@ -15,17 +15,16 @@
 
 """Utils for loading relevant files."""
 
-import os
+import importlib.resources
 import numpy as np
 import six.moves.cPickle as pickle
 
-# pre-generated questions
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-pregen_path = os.path.join(parent_dir,
-                           'assets/pregenerated_data/all_question.pkl')
-variable_input_pregen_path = os.path.join(
-    parent_dir, 'assets/pregenerated_data/all_questions_variable_input.pkl')
+import assets.pregenerated_data
 
+with importlib.resources.path(assets.pregenerated_data, 'all_question.pkl') as path:
+  pregen_path = path
+with importlib.resources.path(assets.pregenerated_data, 'all_questions_variable_input.pkl') as path:
+  variable_input_pregen_path = path
 
 
 def load_all_question(path=pregen_path):

@@ -20,10 +20,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import importlib.resources
 import json
 import os
 import random
 
+import cv2
+import numpy as np
+from dm_control import mujoco
 from gym import spaces
 from gym import utils
 import numpy as np
@@ -31,36 +35,41 @@ import numpy as np
 from third_party.clevr_robot_env_utils.generate_question import generate_question_from_scene_struct
 import third_party.clevr_robot_env_utils.generate_scene as gs
 import third_party.clevr_robot_env_utils.question_engine as qeng
+from assets import pregenerated_data
+import assets
+import metadata
+import templates
+
+# from . import assets, metadata
 
 from utils import load_utils
 from utils.xml_utils import convert_scene_to_xml
 
 import cv2
 import mujoco_env as mujoco_env  # custom mujoco_env
-from dm_control import mujoco
 
-file_dir = os.path.abspath(os.path.dirname(__file__))
+with importlib.resources.path(assets, 'clevr_default.xml') as path:
+  DEFAULT_XML_PATH = path
+  
+with importlib.resources.path(pregenerated_data, "10_fixed_objective.pkl") as path:
+  FIXED_PATH = path
+  
+with importlib.resources.path(metadata, "metadata.json") as path:
+  DEFAULT_METADATA_PATH = path
 
-DEFAULT_XML_PATH = os.path.join(file_dir, 'assets', 'clevr_default.xml')
-FIXED_PATH = os.path.join(file_dir, 'templates', '10_fixed_objective.pkl')
+with importlib.resources.path(metadata, "variable_obj_meta_data.json") as path:
+  VARIABLE_OBJ_METADATA_PATH = path
 
-# metadata
-DEFAULT_METADATA_PATH = os.path.join(file_dir, 'metadata', 'metadata.json')
-VARIABLE_OBJ_METADATA_PATH = os.path.join(file_dir, 'metadata',
-                                          'variable_obj_meta_data.json')
+with importlib.resources.path(templates, "even_question_distribution.json") as path:
+  EVEN_Q_DIST_TEMPLATE = path
 
-# template_path
-EVEN_Q_DIST_TEMPLATE = os.path.join(
-    file_dir, 'templates/even_question_distribution.json')
-VARIABLE_OBJ_TEMPLATE = os.path.join(file_dir, 'templates',
-                                     'variable_object.json')
-
+with importlib.resources.path(templates, "variable_object.json") as path:
+  VARIABLE_OBJ_TEMPLATE = path
 
 # fixed discrete action set
 DIRECTIONS = [[1, 0], [0, 1], [-1, 0], [0, -1], [0.8, 0.8], [-0.8, 0.8],
               [0.8, -0.8], [-0.8, -0.8]]
 X_RANGE, Y_RANGE = 0.7, 0.35
-
 
 def _create_discrete_action_set():
   discrete_action_set = []

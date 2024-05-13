@@ -19,7 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
+import importlib.resources
+from pathlib import Path
 
 from dm_control import mujoco
 import gym
@@ -27,6 +28,7 @@ from gym import spaces
 from gym.utils import seeding
 import numpy as np
 
+import assets
 
 class MujocoEnv(gym.Env):
   """Custom Mujoco environment that uses dm control's wrapper."""
@@ -34,17 +36,16 @@ class MujocoEnv(gym.Env):
   def __init__(self, model_path, frame_skip, max_episode_steps=None,
                reward_threshold=None):
 
-    if model_path.startswith('/'):
-      fullpath = model_path
-    else:
-      fullpath = os.path.join(
-          os.path.abspath(os.path.dirname(__file__)), 'assets', model_path)
+    fullpath = Path(model_path)
+    if not fullpath.is_absolute():
+      with importlib.resources.path(assets, fullpath) as path:
+        fullpath = path
 
-    if not os.path.exists(fullpath):
+    if not fullpath.exists():
       raise IOError('File %s does not exist' % fullpath)
 
     self.frame_skip = frame_skip
-    self.physics = mujoco.Physics.from_xml_path(fullpath)
+    self.physics = mujoco.Physics.from_xml_path(str(fullpath))
     self.camera = mujoco.MovableCamera(self.physics, height=480, width=640)
 
     self.viewer = None

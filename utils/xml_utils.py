@@ -19,17 +19,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
+import importlib.resources
 import xml.etree.ElementTree as ET
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+import assets.textures as textures
 
-red_metal_path = os.path.join(parent_dir, 'assets/textures/metal_red.png')
-cyan_metal_path = os.path.join(parent_dir, 'assets/textures/metal_cyan.png')
-purple_metal_path = os.path.join(parent_dir, 'assets/textures/metal_purple.png')
-green_metal_path = os.path.join(parent_dir, 'assets/textures/metal_green.png')
-blue_metal_path = os.path.join(parent_dir, 'assets/textures/metal_blue.png')
-
+with importlib.resources.path(textures, "metal_red.png") as path:
+    red_metal_path = str(path)
+with importlib.resources.path(textures, "metal_cyan.png") as path:
+    cyan_metal_path = str(path)
+with importlib.resources.path(textures, "metal_purple.png") as path:
+    purple_metal_path = str(path)
+with importlib.resources.path(textures, "metal_green.png") as path:
+    green_metal_path = str(path)
+with importlib.resources.path(textures, "metal_blue.png") as path:
+    blue_metal_path = str(path)
 
 texture = {
     'blue': [('name', 'tex_blue'), ('type', '2d'), ('file', blue_metal_path)],
