@@ -20,9 +20,11 @@ from __future__ import division
 from __future__ import print_function
 
 import importlib.resources
+from abc import ABC
 from pathlib import Path
 
 from dm_control import mujoco
+from dm_control import _render
 import gym
 from gym import spaces
 from gym.utils import seeding
@@ -30,12 +32,13 @@ import numpy as np
 
 import assets
 
-class MujocoEnv(gym.Env):
+class MujocoEnv(gym.Env, ABC):
   """Custom Mujoco environment that uses dm control's wrapper."""
 
   def __init__(self, model_path, frame_skip, max_episode_steps=None,
                reward_threshold=None):
 
+    self.seed(0)
     fullpath = Path(model_path)
     if not fullpath.is_absolute():
       with importlib.resources.path(assets, fullpath) as path:
@@ -57,8 +60,9 @@ class MujocoEnv(gym.Env):
 
     self.init_qpos = self.physics.data.qpos.ravel().copy()
     self.init_qvel = self.physics.data.qvel.ravel().copy()
-    observation, _, done, _ = self.step(np.zeros(self.physics.model.nu))
-    assert not done
+    # self.random_start = True
+    self.random_start = False
+    observation = self.reset()
     self.obs_dim = observation.size
 
     bounds = self.physics.model.actuator_ctrlrange.copy()
@@ -75,7 +79,7 @@ class MujocoEnv(gym.Env):
 
     self.seed()
     self.camera_setup()
-
+    
   def seed(self, seed=None):
     self.np_random, seed = seeding.np_random(seed)
     return [seed]
@@ -114,7 +118,9 @@ class MujocoEnv(gym.Env):
       data = self.camera.render()
       return np.copy(data)  # render reuses the same memory space.
     elif mode == 'human':
-      raise NotImplementedError('Interactive rendering not implemented yet.')
+      rgb = self.camera.render()
+      return np.copy(rgb)
+      # raise NotImplementedError('Interactive rendering not implemented yet.')
 
   def get_body_com(self, body_name):
     idx = self.physics.model.name2id(body_name, 1)

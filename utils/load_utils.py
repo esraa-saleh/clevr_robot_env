@@ -44,7 +44,7 @@ def create_train_test_question_split():
   indices = np.arange(all_questions_len)
   indices_train = indices[::3].astype(np.int32)
   indices_test = np.int32(list(set(indices) - set(indices_train)))
-  aq = np.array(all_questions)
+  aq = np.array(all_questions, dtype=object)
 
   all_questions_train = list(aq[indices_train])
   all_questions_test = list(aq[indices_test])

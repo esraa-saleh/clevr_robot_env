@@ -70,6 +70,40 @@ def generate_scene_struct(c2w, num_object=3, metadata=None):
   scene_struct['relationships'] = compute_relationship(scene_struct)
   return objects, scene_struct
 
+def generate_fixed_scene_struct(c2w, num_object=3, metadata=None):
+  """Generate a fixed scene struct."""
+  # This will give ground-truth information about the scene and its objects
+  scene_struct = {
+      'split': 'none',
+      'objects': [],
+      'directions': {},
+  }
+
+  plane_normal = np.array([0, 0, 1.])
+  cam_behind = c2w.dot(np.array([-1., 0, 0]))
+  cam_left = c2w.dot(np.array([0, 1., 0]))
+  cam_up = c2w.dot(np.array([0, 0, 1.]))
+  plane_behind = cam_behind - cam_behind.dot(plane_normal) * plane_normal
+  plane_left = cam_left - cam_left.dot(plane_normal) * plane_normal
+  plane_up = cam_up.dot(plane_normal) * plane_normal
+  plane_behind /= np.linalg.norm(plane_behind)
+  plane_left /= np.linalg.norm(plane_left)
+  plane_up /= np.linalg.norm(plane_up)
+
+  # Save all six axis-aligned directions in the scene struct
+  scene_struct['directions']['behind'] = plane_behind
+  scene_struct['directions']['front'] = -plane_behind
+  scene_struct['directions']['left'] = plane_left
+  scene_struct['directions']['right'] = -plane_left
+  scene_struct['directions']['above'] = plane_up
+  scene_struct['directions']['below'] = -plane_up
+
+  # Now make some random objects
+  objects = add_fixed_objects(scene_struct, num_object, metadata=metadata)
+  scene_struct['objects'] = objects
+  scene_struct['relationships'] = compute_relationship(scene_struct)
+  return objects, scene_struct
+
 
 def add_random_objects(scene_struct,
                        num_objects,
@@ -161,6 +195,50 @@ def add_random_objects(scene_struct,
         'shape_name': shape_name,
         'size': size_name,
         '3d_coords': (x, y, r),
+        'color_val': color,
+        'color': color_name,
+        'rotation': theta,
+        'material': mat_name,
+    })
+  return objects
+
+def add_fixed_objects(scene_struct,
+                       num_objects,
+                       max_retries=10,
+                       min_margin=0.01,
+                       min_dist=0.1,
+                       metadata=None):
+  """Add fixed objects to scene struct."""
+  positions = []
+  objects = []
+
+  color_mapping = [('red', '1 0.1 0.1 1'), ('blue', '0.2 0.5 1 1'),
+                    ('green', '0.2 1 0 1'), ('purple', '0.8 0.2 1 1'),
+                    ('cyan', '0.2 1 1 1')]
+  position_mapping = [(0., 0., 0.13), 
+                      (0., 0.25, 0.13), 
+                      (0.25, 0., 0.13), 
+                      (0., -0.25, 0.13), 
+                      (-0.25, 0., 0.13)]
+  rotation_mapping = [0., 0., 0., 0., 0.]
+
+  assert len(color_mapping) >= num_objects
+
+  for i in range(num_objects):
+    size_name = 'large'
+    r = 0.13
+    shape_name = 'sphere'
+    shape = 'sphere'
+    color_name, color = color_mapping[i]
+    mat_name = 'rubber'
+    positions.append(position_mapping[i])
+    theta = rotation_mapping[i]
+    
+    objects.append({
+        'shape': shape,
+        'shape_name': shape_name,
+        'size': size_name,
+        '3d_coords': position_mapping[i],
         'color_val': color,
         'color': color_name,
         'rotation': theta,

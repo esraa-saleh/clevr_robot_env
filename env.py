@@ -22,15 +22,12 @@ from __future__ import print_function
 
 import importlib.resources
 import json
-import os
-import random
 
 import cv2
 import numpy as np
 from dm_control import mujoco
 from gym import spaces
 from gym import utils
-import numpy as np
 
 from third_party.clevr_robot_env_utils.generate_question import generate_question_from_scene_struct
 import third_party.clevr_robot_env_utils.generate_scene as gs
@@ -40,8 +37,6 @@ import assets
 import metadata
 import templates
 
-# from . import assets, metadata
-
 from utils import load_utils
 from utils.xml_utils import convert_scene_to_xml
 
@@ -50,19 +45,14 @@ import mujoco_env as mujoco_env  # custom mujoco_env
 
 with importlib.resources.path(assets, 'clevr_default.xml') as path:
   DEFAULT_XML_PATH = path
-  
 with importlib.resources.path(pregenerated_data, "10_fixed_objective.pkl") as path:
   FIXED_PATH = path
-  
 with importlib.resources.path(metadata, "metadata.json") as path:
   DEFAULT_METADATA_PATH = path
-
 with importlib.resources.path(metadata, "variable_obj_meta_data.json") as path:
   VARIABLE_OBJ_METADATA_PATH = path
-
 with importlib.resources.path(templates, "even_question_distribution.json") as path:
   EVEN_Q_DIST_TEMPLATE = path
-
 with importlib.resources.path(templates, "variable_object.json") as path:
   VARIABLE_OBJ_TEMPLATE = path
 
@@ -94,13 +84,11 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
   def __init__(self,
                maximum_episode_steps=100,
-               xml_path=None,
                metadata_path=None,
                template_path=None,
                num_object=5,
                agent_type='pm',
                random_start=False,
-               fixed_objective=True,
                description_num=15,
                action_type='continuous',
                obs_type='direct',
@@ -121,6 +109,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                variable_scene_content=False):
 
     utils.EzPickle.__init__(self)
+    self.seed(0)
     initial_xml_path = DEFAULT_XML_PATH
     self.obj_name = []
     self.action_type = action_type
@@ -139,6 +128,10 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     self.min_change_th = min_change_th
     self.use_polar = use_polar
     self.suppress_other_movement = suppress_other_movement
+
+    # agent type and randomness of starting location
+    self.agent_type = agent_type
+    self.random_start = random_start
 
     if use_subset_instruction and systematic_generalization:
       train, test = load_utils.create_systematic_generalization_split()
@@ -187,7 +180,11 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     self.w2c, self.c2w = gs.camera_transformation_from_pose(90, -45)
 
     # sample a random scene and struct
-    self.scene_graph, self.scene_struct = self.sample_random_scene()
+    # self.scene_graph, self.scene_struct = self.sample_random_scene()
+    
+    # sample a fixed scene and struct 
+    self.scene_graph, self.scene_struct = self.sample_fixed_scene()
+    
 
     # total number of colors and shapes
     def one_hot_encoding(key_to_idx, max_length):
@@ -260,16 +257,12 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     if self.direct_obs:
       self.observation_space = spaces.Box(
-          low=np.concatenate(zip([-0.6] * num_object, [-0.4] * num_object)),
-          high=np.concatenate(zip([0.6] * num_object, [0.6] * num_object)),
+          low=np.concatenate(list(zip([-0.6] * num_object, [-0.4] * num_object))),
+          high=np.concatenate(list(zip([0.6] * num_object, [0.6] * num_object))),
           dtype=np.float32)
     else:
       self.observation_space = spaces.Box(
           low=0, high=255, shape=(self.res, self.res, 3), dtype=np.uint8)
-
-    # agent type and randomness of starting location
-    self.agent_type = agent_type
-    self.random_start = random_start
 
     if not self.random_start:
       curr_scene_xml = convert_scene_to_xml(
@@ -278,7 +271,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
           checker_board=self.checker_board)
     else:
       random_loc = '{} {} -0.2'.format(
-          random.uniform(-0.6, 0.6), random.uniform(-0.3, 0.5))
+          self.np_random.uniform(-0.6, 0.6), self.np_random.uniform(-0.3, 0.5))
       curr_scene_xml = convert_scene_to_xml(
           self.scene_graph,
           agent=self.agent_type,
@@ -317,7 +310,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         candidates = self.all_questions
       else:
         candidates = self.valid_questions
-      random.shuffle(candidates)
+      self.np_random.shuffle(candidates)
       false_question_count = 0
 
       for q, p in candidates:
@@ -329,7 +322,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
           currently_false.append((q, p, fixed_object_idx, fixed_object_loc))
           false_question_count += 1
 
-      random.shuffle(currently_false)
+      self.np_random.shuffle(currently_false)
 
     if goal:
       full_answer = self.answer_question(goal, True)
@@ -461,7 +454,8 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     """Reset with a random configuration."""
     if new_scene_content or not self.variable_scene_content:
       # sample a random scene and struct
-      self.scene_graph, self.scene_struct = self.sample_random_scene()
+      # self.scene_graph, self.scene_struct = self.sample_random_scene()
+      self.scene_graph, self.scene_struct = self.sample_fixed_scene()
     else:
       # randomly perturb existing objects in the scene
       new_graph = gs.randomly_perturb_objects(self.scene_struct,
@@ -483,7 +477,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
           checker_board=self.checker_board)
     else:
       random_loc = '{} {} -0.2'.format(
-          random.uniform(-0.6, 0.6), random.uniform(-0.3, 0.5))
+          self.np_random.uniform(-0.6, 0.6), self.np_random.uniform(-0.3, 0.5))
       curr_scene_xml = convert_scene_to_xml(
           self.scene_graph,
           agent=self.agent_type,
@@ -563,19 +557,29 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                                       self.clevr_metadata)
     else:
       return gs.generate_scene_struct(self.c2w, self.num_object)
+      
+  def sample_fixed_scene(self):
+    """Sample a fixed scene with these objects:
+        Red sphere at 0, 0.
+        Blue sphere at 0, 0.25
+        Green sphere at 0.25, 0
+        Purple sphere at 0, -0.25
+        Cyan sphere at -0.25, 0
+    """
+    return gs.generate_fixed_scene_struct(self.c2w, self.num_object)
 
   def sample_goal(self):
     """Sample a currently false statement and its corresponding text."""
     candidate_objective = self.all_questions
     if self.cache_valid_questions:
       candidate_objective = self.valid_questions
-    random.shuffle(candidate_objective)
+    self.np_random.shuffle(candidate_objective)
     for g, gp in candidate_objective:
       if not self.answer_question(gp):
         self.all_goals_satisfied = False
         return g, gp
     print('All goal are satisfied.')
-    goal, goal_program = random.choice(candidate_objective)
+    goal, goal_program = self.np_random.choice(candidate_objective)
     self.all_goals_satisfied = True
     return goal, goal_program
 
@@ -589,6 +593,14 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
       return np.array(action)
     else:
       return self.action_space.sample()
+    
+  def sample_fixed_action(self, color_idx, direction_idx):
+    """Sample a fixed action for the environment."""
+    action = [
+        color_idx,
+        direction_idx
+    ]
+    return np.array(action)
 
   def sample_valid_questions(self, iterations=50):
     """Sample valid questions for the current scene content."""
@@ -694,7 +706,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     index, loc = -1, None
     for i, a in enumerate(answer):
       if a is True:
-        index = random.choice(answer[i - 1])
+        index = self.np_random.choice(answer[i - 1])
       elif isinstance(a, float) or isinstance(a, int):
         index = answer[i]
         break
