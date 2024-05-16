@@ -106,7 +106,8 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                systematic_generalization=False,
                suppress_other_movement=False,
                top_down_view=False,
-               variable_scene_content=False):
+               variable_scene_content=False,
+               obj_pos=[]):
 
     utils.EzPickle.__init__(self)
     self.seed(0)
@@ -183,7 +184,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     # self.scene_graph, self.scene_struct = self.sample_random_scene()
     
     # sample a fixed scene and struct 
-    self.scene_graph, self.scene_struct = self.sample_fixed_scene()
+    self.scene_graph, self.scene_struct = self.sample_fixed_scene(obj_pos)
     
 
     # total number of colors and shapes
@@ -220,6 +221,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self,
         initial_xml_path,
         frame_skip,
+        obj_pos,
         max_episode_steps=maximum_episode_steps,
         reward_threshold=0.,
     )
@@ -282,7 +284,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     self.valid_questions = []
 
     # counter for reset
-    self.reset(True)
+    self.reset(obj_pos, True)
     self.curr_step = 0
     self.current_goal_text, self.current_goal = self.sample_goal()
     self.achieved_last_step = []
@@ -450,12 +452,12 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     dist = np.min(np.linalg.norm(dist, axis=1))
     self.do_simulation(direction, duration)
 
-  def reset(self, new_scene_content=True):
+  def reset(self, obj_pos, new_scene_content=True):
     """Reset with a random configuration."""
     if new_scene_content or not self.variable_scene_content:
       # sample a random scene and struct
       # self.scene_graph, self.scene_struct = self.sample_random_scene()
-      self.scene_graph, self.scene_struct = self.sample_fixed_scene()
+      self.scene_graph, self.scene_struct = self.sample_fixed_scene(obj_pos)
     else:
       # randomly perturb existing objects in the scene
       new_graph = gs.randomly_perturb_objects(self.scene_struct,
@@ -558,7 +560,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     else:
       return gs.generate_scene_struct(self.c2w, self.num_object)
       
-  def sample_fixed_scene(self):
+  def sample_fixed_scene(self, obj_pos):
     """Sample a fixed scene with these objects:
         Red sphere at 0, 0.
         Blue sphere at 0, 0.25
@@ -566,7 +568,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         Purple sphere at 0, -0.25
         Cyan sphere at -0.25, 0
     """
-    return gs.generate_fixed_scene_struct(self.c2w, self.num_object)
+    return gs.generate_fixed_scene_struct(self.c2w, self.num_object, obj_pos)
 
   def sample_goal(self):
     """Sample a currently false statement and its corresponding text."""

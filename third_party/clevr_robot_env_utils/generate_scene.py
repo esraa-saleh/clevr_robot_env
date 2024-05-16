@@ -70,7 +70,7 @@ def generate_scene_struct(c2w, num_object=3, metadata=None):
   scene_struct['relationships'] = compute_relationship(scene_struct)
   return objects, scene_struct
 
-def generate_fixed_scene_struct(c2w, num_object=3, metadata=None):
+def generate_fixed_scene_struct(c2w, num_object=3, obj_pos=[], metadata=None):
   """Generate a fixed scene struct."""
   # This will give ground-truth information about the scene and its objects
   scene_struct = {
@@ -99,7 +99,7 @@ def generate_fixed_scene_struct(c2w, num_object=3, metadata=None):
   scene_struct['directions']['below'] = -plane_up
 
   # Now make some random objects
-  objects = add_fixed_objects(scene_struct, num_object, metadata=metadata)
+  objects = add_fixed_objects(scene_struct, num_object, obj_pos, metadata=metadata)
   scene_struct['objects'] = objects
   scene_struct['relationships'] = compute_relationship(scene_struct)
   return objects, scene_struct
@@ -204,6 +204,7 @@ def add_random_objects(scene_struct,
 
 def add_fixed_objects(scene_struct,
                        num_objects,
+                       obj_pos,
                        max_retries=10,
                        min_margin=0.01,
                        min_dist=0.1,
@@ -215,11 +216,7 @@ def add_fixed_objects(scene_struct,
   color_mapping = [('red', '1 0.1 0.1 1'), ('blue', '0.2 0.5 1 1'),
                     ('green', '0.2 1 0 1'), ('purple', '0.8 0.2 1 1'),
                     ('cyan', '0.2 1 1 1')]
-  position_mapping = [(0., 0., 0.13), 
-                      (0., 0.25, 0.13), 
-                      (0.25, 0., 0.13), 
-                      (0., -0.25, 0.13), 
-                      (-0.25, 0., 0.13)]
+  position_mapping = obj_pos
   rotation_mapping = [0., 0., 0., 0., 0.]
 
   assert len(color_mapping) >= num_objects
