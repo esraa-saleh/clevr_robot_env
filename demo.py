@@ -19,6 +19,11 @@ def main(_):
       obs_type="order_invariant",
       direct_obs=True,
       use_subset_instruction=True,
+      obj_pos=[(0., 0., 0.13), 
+            (0., 0.25, 0.13), 
+            (0.25, 0., 0.13), 
+            (0., -0.25, 0.13), 
+            (-0.25, 0., 0.13)],
   )
   questions = [('There is a red matte sphere; are there any cyan spheres in front of it?', [{'type': 'scene', 'inputs': []}, {'type': 'filter_color', 'inputs': [0], 'side_inputs': ['red']}, {'type': 'filter_material', 'inputs': [1], 'side_inputs': ['rubber']}, {'type': 'filter_shape', 'inputs': [2], 'side_inputs': ['sphere']}, {'type': 'exist', 'inputs': [3]}, {'type': 'relate', 'inputs': [3], 'side_inputs': ['front']}, {'type': 'filter_color', 'inputs': [5], 'side_inputs': ['cyan']}, {'type': 'filter_shape', 'inputs': [6], 'side_inputs': ['sphere']}, {'type': 'exist', 'inputs': [7]}]), 
                ('There is a purple matte ball; are there any cyan balls in front of it?', [{'type': 'scene', 'inputs': []}, {'type': 'filter_color', 'inputs': [0], 'side_inputs': ['purple']}, {'type': 'filter_material', 'inputs': [1], 'side_inputs': ['rubber']}, {'type': 'filter_shape', 'inputs': [2], 'side_inputs': ['sphere']}, {'type': 'exist', 'inputs': [3]}, {'type': 'relate', 'inputs': [3], 'side_inputs': ['front']}, {'type': 'filter_color', 'inputs': [5], 'side_inputs': ['cyan']}, {'type': 'filter_shape', 'inputs': [6], 'side_inputs': ['sphere']}, {'type': 'exist', 'inputs': [7]}]), 

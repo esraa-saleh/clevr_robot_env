@@ -290,6 +290,22 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     self.achieved_last_step = []
     self.achieved_last_step_program = []
     print('CLEVR-ROBOT environment initialized.')
+  
+  def step_no_physics(self, action):
+    self.scene_graph[action[0]]['3d_coords'] = action[1]
+    self.scene_struct['objects'] = self.scene_graph
+    self.scene_struct['relationships'] = gs.compute_relationship(
+        self.scene_struct, use_polar=self.use_polar)
+    self.curr_step += 1
+    obj_pos = [item['3d_coords'] for item in self.scene_graph]
+    mujoco_env.MujocoEnv.__init__(
+        self,
+        DEFAULT_XML_PATH,
+        20,
+        obj_pos,
+        max_episode_steps=100,
+        reward_threshold=0.,
+    )
 
   def step(self,
            a,
