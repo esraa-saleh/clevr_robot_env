@@ -57,13 +57,13 @@ def main(_):
       obj_pos=obj_pos,
   )
   print('Initialization: ')
-  QA(env, questions, "init")
+  QA(env, questions)
   
   # Action
   action = [4, ((-0.25, -0.25, 0.13))] # Cyan sphere to lower left corner
   env.step_no_physics(action)
   print('\n After action:')
-  QA(env, questions, "action")
+  QA(env, questions)
   return
 
 if __name__ == '__main__':
