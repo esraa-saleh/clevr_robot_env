@@ -23,6 +23,7 @@ from __future__ import print_function
 import json
 import os
 import random
+import re
 
 from gym import spaces
 from gym import utils
@@ -251,8 +252,8 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     if self.direct_obs:
       self.observation_space = spaces.Box(
-          low=np.concatenate(zip([-0.6] * num_object, [-0.4] * num_object)),
-          high=np.concatenate(zip([0.6] * num_object, [0.6] * num_object)),
+          low=np.concatenate(list(zip([-0.6] * num_object, [-0.4] * num_object))),
+          high=np.concatenate(list(zip([0.6] * num_object, [0.6] * num_object))),
           dtype=np.float32)
     else:
       self.observation_space = spaces.Box(
@@ -635,7 +636,67 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     """Update and return the current scene description."""
     self._update_description()
     return self.descriptions, self.full_descriptions
+  
+  def get_formatted_description(self):
+    """Get formatted decsription of the current scene for LLM input
+    """
+    unformatted, _ = self.get_description()
+    
+    # Remove questions that are false
+    all_true_questions = [question for question in unformatted if 'False' not in question]
+    
+    # Remove "rubber" from each sentence
+    all_true_questions = [question.replace(' rubber', '') for question in all_true_questions]
+    
+    def rephrase(sentence):
+      # Extract the relevant parts using regex
+      match = re.match(r'There is a (\w+) sphere[;,] are there any (\w+) spheres (\w+) it\?', sentence)
+      if match:
+        main_color = match.group(1)
+        other_color = match.group(2)
+        position = match.group(3)
+        # Switch "behind" and "front" and handle the "of"
+        if position == "behind":
+          return f'There is a {other_color} sphere in front of the {main_color} sphere'
+        elif position == "front":
+          return f'There is a {other_color} sphere behind the {main_color} sphere'
+        elif position == "left":
+          return f'There is a {other_color} sphere left of the {main_color} sphere'
+        elif position == "right":
+          return f'There is a {other_color} sphere right of the {main_color} sphere'
+        else:
+          return f'There is a {other_color} sphere {position} of the {main_color} sphere'
+      return sentence
 
+    # Rephrase the filtered data
+    rephrased_data = [rephrase(item.split(' True')[0]) for item in all_true_questions]
+
+    # Function to identify redundant descriptions
+    def is_redundant(desc1, desc2):
+      pattern = r'There is a (\w+) sphere (in front of|behind|left(?: of)?|right(?: of)?) the (\w+) sphere'
+      match1 = re.match(pattern, desc1)
+      match2 = re.match(pattern, desc2)
+      if match1 and match2:
+        color1, pos1, color2 = match1.groups()
+        color3, pos2, color4 = match2.groups()
+        if (color1 == color4 and color2 == color3):
+          if ((pos1 == 'in front of' and pos2 == 'behind') or 
+            (pos1 == 'behind' and pos2 == 'in front of') or 
+            (pos1 == 'left of' and pos2 == 'right of') or 
+            (pos1 == 'right of' and pos2 == 'left of')):
+            return True
+      return False
+
+    # Filter out redundant descriptions
+    pruned_rephrased_data = []
+    for desc in rephrased_data:
+      if not any(is_redundant(desc, pruned_desc) for pruned_desc in pruned_rephrased_data):
+        pruned_rephrased_data.append(desc)
+    
+    return list(set(pruned_rephrased_data))
+
+
+    
   def _update_description(self, custom_n=None):
     """Update the text description of the current scene."""
     gq = generate_question_from_scene_struct
