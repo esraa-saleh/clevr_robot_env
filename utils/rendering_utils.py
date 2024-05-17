@@ -7,4 +7,9 @@ def save_scene(file_path, scene_obs, dpi=300):
     fig.add_axes(ax)
     ax.imshow(scene_obs, aspect='auto')
     fig.savefig(file_path, dpi= dpi)
+
+def show_scene(env):
+    rgb = env.render(mode='rgb_array')
+    plt.imshow(rgb)
+    plt.show()
     

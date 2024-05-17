@@ -27,6 +27,7 @@ import re
 
 from gym import spaces
 from gym import utils
+from itertools import combinations
 import numpy as np
 
 from third_party.clevr_robot_env_utils.generate_question import generate_question_from_scene_struct
@@ -611,6 +612,47 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     self.scene_struct['relationships'] = gs.compute_relationship(
         self.scene_struct)
     return valid_q
+  
+  def get_missing_color_combinations(self):
+    """Color combinations that don't have a direct connection in the scene description
+    """
+    descriptions = self.get_formatted_description()
+    
+    # Extract connections
+    connections = []
+    for description in descriptions:
+      match = re.match(r'There is a (\w+) sphere (.+?) the (\w+) sphere', description)
+      if match:
+        color1 = match.group(1)
+        color2 = match.group(3)
+        connections.append((color1, color2))
+        connections.append((color2, color1))
+
+    colors = list({color for conn in connections for color in conn})
+    all_combinations = list(combinations(colors, 2))
+
+    # Filter out combinations that have a direct connection
+    return [
+      combo for combo in all_combinations
+      if combo not in connections and (combo[1], combo[0]) not in connections
+    ]
+  
+  def sample_missing_questions(self):
+    """Questions that are not explicitly answered by the scene description
+    """
+    questions = [item[0] for item in self.all_questions]
+    combinations = self.get_missing_color_combinations()
+    
+    def involves_combination(question, combination):
+        pattern = r'There is a (\w+) sphere.*?are there any (\w+) spheres'
+        match = re.search(pattern, question)
+        if match:
+            color1, color2 = match.groups()
+            return (color1, color2) == combination or (color2, color1) == combination
+        return False
+
+    # Filter questions that involve non-connected color combinations
+    return [question for question in questions if any(involves_combination(question, combo) for combo in combinations)]
 
   def answer_question(self, program, all_outputs=False):
     """Answer a functional program on the current scene."""
@@ -695,8 +737,6 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     
     return list(set(pruned_rephrased_data))
 
-
-    
   def _update_description(self, custom_n=None):
     """Update the text description of the current scene."""
     gq = generate_question_from_scene_struct
