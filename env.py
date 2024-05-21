@@ -640,7 +640,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
   def sample_missing_questions(self):
     """Questions that are not explicitly answered by the scene description
     """
-    questions = [item[0] for item in self.all_questions]
+    questions = self.all_questions
     combinations = self.get_missing_color_combinations()
     
     def involves_combination(question, combination):
@@ -652,7 +652,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return False
 
     # Filter questions that involve non-connected color combinations
-    return [question for question in questions if any(involves_combination(question, combo) for combo in combinations)]
+    return [question for question in questions if any(involves_combination(question[0], combo) for combo in combinations)]
 
   def answer_question(self, program, all_outputs=False):
     """Answer a functional program on the current scene."""
@@ -736,6 +736,18 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         pruned_rephrased_data.append(desc)
     
     return list(set(pruned_rephrased_data))
+  
+  def rephrase_question(self, question):
+    match = re.match(r'There is a (\w+) sphere[;,] are there any (\w+) spheres (\w+) it\?', question)
+    if match:
+      main_color = match.group(1)
+      other_color = match.group(2)
+      position = match.group(3)
+      # Switch "behind" and "front" and handle the "of"
+      if position == "behind":
+        return f'There is a {other_color} sphere in front of the {main_color} sphere'
+      elif position == "front":
+        return f'There is a {other_color} sphere behind the {main_color} sphere'
 
   def _update_description(self, custom_n=None):
     """Update the text description of the current scene."""
