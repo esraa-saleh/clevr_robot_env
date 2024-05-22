@@ -613,46 +613,37 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.scene_struct)
     return valid_q
   
-  def get_missing_color_combinations(self):
-    """Color combinations that don't have a direct connection in the scene description
-    """
-    descriptions = self.get_formatted_description()
-    
-    # Extract connections
-    connections = []
-    for description in descriptions:
-      match = re.match(r'There is a (\w+) sphere (.+?) the (\w+) sphere', description)
-      if match:
-        color1 = match.group(1)
-        color2 = match.group(3)
-        connections.append((color1, color2))
-        connections.append((color2, color1))
-
-    colors = list({color for conn in connections for color in conn})
-    all_combinations = list(combinations(colors, 2))
-
-    # Filter out combinations that have a direct connection
-    return [
-      combo for combo in all_combinations
-      if combo not in connections and (combo[1], combo[0]) not in connections
-    ]
-  
-  def sample_missing_questions(self):
+  def sample_missing_questions(self, colors):
     """Questions that are not explicitly answered by the scene description
     """
     questions = self.all_questions
-    combinations = self.get_missing_color_combinations()
     
-    def involves_combination(question, combination):
-        pattern = r'There is a (\w+) sphere.*?are there any (\w+) spheres'
-        match = re.search(pattern, question)
-        if match:
-            color1, color2 = match.groups()
-            return (color1, color2) == combination or (color2, color1) == combination
-        return False
+    filtered_questions = [
+        question for question in questions
+        if (colors[0] in question[0] and colors[1] in question[0])
+    ]
+    
+    # def involves_combination(question, colors):
+    #     pattern = r'There is a (\w+) sphere.*?are there any (\w+) spheres'
+    #     match = re.search(pattern, question)
+    #     if match:
+    #         color1, color2 = match.groups()
+    #         return {color1, color2} == colors or {color2, color1} == colors
+    #     return False
 
     # Filter questions that involve non-connected color combinations
-    return [question for question in questions if any(involves_combination(question[0], combo) for combo in combinations)]
+    return filtered_questions
+
+  def filter_description(self, description, colors):
+    def pick_random_pair():
+      indices = list(range(5))
+      return random.sample(indices, 2)
+    
+    color_indices = pick_random_pair()
+    color_pair = (colors[color_indices[0]], colors[color_indices[1]])
+    
+    filtered_sentences = [sentence for sentence in description if not (colors[color_indices[0]] in sentence and colors[color_indices[1]] in sentence)]
+    return filtered_sentences, color_pair
 
   def answer_question(self, program, all_outputs=False):
     """Answer a functional program on the current scene."""
@@ -734,8 +725,12 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     for desc in rephrased_data:
       if not any(is_redundant(desc, pruned_desc) for pruned_desc in pruned_rephrased_data):
         pruned_rephrased_data.append(desc)
+        
+    pruned_rephrased_data = list(set(pruned_rephrased_data))
+    # Filter out random pair of colors
+    final_description, colors_leftout = self.filter_description(pruned_rephrased_data, ['red', 'blue', 'green', 'purple', 'cyan'])
     
-    return list(set(pruned_rephrased_data))
+    return final_description, colors_leftout
   
   def rephrase_question(self, question):
     match = re.match(r'There is a (\w+) sphere[;,] are there any (\w+) spheres (\w+) it\?', question)
