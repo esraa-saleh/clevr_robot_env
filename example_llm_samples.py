@@ -20,6 +20,8 @@ from absl import app, flags
 from matplotlib import pyplot as PLT
 from env import ClevrEnv
 
+import json
+
 FLAGS = flags.FLAGS
 COLORS = ['red', 'blue', 'green', 'purple', 'cyan']
 DIRECTIONS = ['left', 'right', 'front', 'behind']
@@ -64,7 +66,39 @@ def main(_):
   llm_questions = env.generate_llm_questions(formatted_questions, colors_leftout)
   llm_questions_answers = []
   for i in range(len(llm_questions)):
-    llm_questions_answers.append((llm_questions[i][0], questions_answers[llm_questions[i][1]][1]))
+    llm_questions_answers.append({'Description': description, 'Question': llm_questions[i][0], 'Answer': questions_answers[llm_questions[i][1]][1]})
+    
+  def change_directions(data):
+    direction_map = {
+        'left': 'West',
+        'right': 'East',
+        'front': 'South',
+        'behind': 'North'
+    }
+
+    def replace_description(text):
+      new_text = []
+      for description in text:
+        for old_direction, cardinal_direction in direction_map.items():
+          description = description.replace(old_direction, cardinal_direction)
+        new_text.append(description)
+      return new_text
+    
+    def replace_question(text):
+      for old_direction, cardinal_direction in direction_map.items():
+        text = text.replace(old_direction, cardinal_direction)
+      return text
+
+    for sample in data:
+      sample['Description'] = replace_description(sample['Description'])
+      sample['Question'] = replace_question(sample['Question'])
+    
+    return data
+  
+  llm_questions_answers = change_directions(llm_questions_answers)
+  
+  with open('llm_data_5.txt', 'w') as convert_file: 
+    convert_file.write(json.dumps(llm_questions_answers))
   
 if __name__ == '__main__':
   app.run(main)
