@@ -719,7 +719,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     return questions
   
   def get_ambiguous_pairs(self, description, colors):
-    colors = ['red', 'blue', 'green', 'purple', 'cyan']
+    colors = ['red', 'blue', 'green', 'magenta', 'cyan', 'purple', 'white']
     all_combinations = itertools.combinations(colors, 2)
     all_combinations = set([tuple(sorted(combination)) for combination in all_combinations])
     
@@ -750,7 +750,21 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
   def get_coordinates_description(self):
     objects = self.scene_struct['objects']
     
-    color_order = ['red', 'blue', 'green', 'purple', 'cyan']
+    color_order = ['red', 'blue', 'green', 'magenta', 'cyan', 'purple', 'white', 
+                   'red2', 'blue2', 'green2', 'magenta2', 'cyan2', 'purple2', 'white2',
+                   'red3', 'blue3', 'green3', 'magenta3', 'cyan3', 'purple3', 'white3',
+                   'red4', 'blue4', 'green4', 'magenta4', 'cyan4', 'purple4', 'white4',
+                   'red5', 'blue5', 'green5', 'magenta5', 'cyan5', 'purple5', 'white5',
+                   'red6', 'blue6', 'green6', 'magenta6', 'cyan6', 'purple6', 'white6',
+                   'red7', 'blue7', 'green7', 'magenta7', 'cyan7', 'purple7', 'white7',
+                   'red8', 'blue8', 'green8', 'magenta8', 'cyan8', 'purple8', 'white8',
+                   'red9', 'blue9', 'green9', 'magenta9', 'cyan9', 'purple9', 'white9',
+                   'red10', 'blue10', 'green10', 'magenta10', 'cyan10', 'purple10', 'white10',
+                   'red11', 'blue11', 'green11', 'magenta11', 'cyan11', 'purple11', 'white11',
+                   'red12', 'blue12', 'green12', 'magenta12', 'cyan12', 'purple12', 'white12',
+                   'red13', 'blue13', 'green13', 'magenta13', 'cyan13', 'purple13', 'white13',
+                   'red14', 'blue14', 'green14', 'magenta14', 'cyan14', 'purple14', 'white14',
+                   'red15', 'blue15', 'green15', 'magenta15', 'cyan15', 'purple15', 'white15']
   
     coords = {}
     for idx, obj in enumerate(objects):
@@ -811,7 +825,7 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     # Rephrase the filtered data
     rephrased_data = [rephrase(item.split(' True')[0]) for item in unformatted]
-    colors_leftout = self.get_ambiguous_pairs(unformatted, ['red', 'blue', 'green', 'purple', 'cyan'])
+    colors_leftout = self.get_ambiguous_pairs(unformatted, ['red', 'blue', 'green', 'magenta', 'cyan', 'purple', 'white'])
     
     return rephrased_data, colors_leftout
 
