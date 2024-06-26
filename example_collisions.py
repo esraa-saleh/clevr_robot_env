@@ -43,6 +43,9 @@ def main(_):
   PLT.imshow(rgb)
   PLT.savefig("initial.jpg")
   
+  description, colors_leftout = env.get_formatted_description()
+  print('Descriptions: ', description)
+  
   print('Initial coordinates:\n', 'Red sphere:', env.scene_struct['objects'][0]['3d_coords'], '\n', 'Blue sphere:', env.scene_struct['objects'][1]['3d_coords'])
   
   dir_idx = np.random.randint(low=0, high=len(DIRECTIONS))
@@ -66,7 +69,11 @@ def main(_):
   rgb = env.render(mode='rgb_array')
   PLT.imshow(rgb)
   PLT.savefig("final.jpg")
-  PLT.show()
+  
+  description, colors_leftout = env.get_formatted_description()
+  print('Descriptions: ', description)
+  kinematics_description = env.get_kinematics_description(action, 120)
+  print('Kinematics description: ', kinematics_description)
 
 if __name__ == '__main__':
   app.run(main)

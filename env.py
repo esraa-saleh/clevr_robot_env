@@ -64,6 +64,7 @@ VARIABLE_OBJ_TEMPLATE = os.path.join(file_dir, 'templates',
 DIRECTIONS = [[1, 0], [0, 1], [-1, 0], [0, -1], [0.8, 0.8], [-0.8, 0.8],
               [0.8, -0.8], [-0.8, -0.8]]
 X_RANGE, Y_RANGE = 0.7, 0.35
+COLORS = ['red', 'blue', 'green', 'purple', 'cyan']
 
 
 def _create_discrete_action_set():
@@ -548,6 +549,21 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     colors_leftout = self.get_ambiguous_pairs(unformatted, ['red', 'blue', 'green', 'purple', 'cyan'])
     
     return rephrased_data, colors_leftout
+  
+  def get_kinematics_description(self, action, n_frames):
+    object_idx = action[0]
+    velocity = self.get_velocity_from_ctrl(action[1])
+    time = self.get_time_from_frames(n_frames)
+    
+    return "You then apply a velocity of {}units/seconds in the direction {} on the {} sphere. Spheres can collide together but the velocity and the direction of the {} sphere doesn't change.".format(velocity, time, COLORS[object_idx], COLORS[object_idx])
+    
+  def get_velocity_from_ctrl(self, ctrl):
+    # TODO
+    return 0
+  
+  def get_time_from_frames(self, n_frames):
+    # TODO
+    return 0
 
   def _update_description(self, custom_n=None):
     """Update the text description of the current scene."""
