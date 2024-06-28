@@ -218,8 +218,8 @@ def set_scene_object(root, worldbody, scene):
     set_attribute(wrist_link_geom, geom_attr)
     
     actuator = ET.SubElement(root, 'actuator')
-    wl_joint_actuator_x = ET.SubElement(actuator, 'motor')
-    wl_joint_actuator_y = ET.SubElement(actuator, 'motor')
+    wl_joint_actuator_x = ET.SubElement(actuator, 'velocity')
+    wl_joint_actuator_y = ET.SubElement(actuator, 'velocity')
 
     actuator_x_attr = [('joint', 'obj{}_joint_x'.format(count)), ('ctrlrange', '-2.0 2.0'),
                       ('ctrllimited', 'true')]
@@ -306,8 +306,8 @@ def set_simple_gripper(root, worldbody):
   for i, attr in enumerate([linking_arm, left_arm, right_arm]):
     set_attribute(geoms[i], attr)
   actuator = ET.SubElement(root, 'actuator')
-  wl_joint_actuator_x = ET.SubElement(actuator, 'motor')
-  wl_joint_actuator_y = ET.SubElement(actuator, 'motor')
+  wl_joint_actuator_x = ET.SubElement(actuator, 'velocity')
+  wl_joint_actuator_y = ET.SubElement(actuator, 'velocity')
 
   actuator_x_attr = [('joint', 'wrist_joint_x'), ('ctrlrange', '-2.0 2.0'),
                      ('ctrllimited', 'true')]

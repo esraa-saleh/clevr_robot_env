@@ -25,6 +25,7 @@ import os
 import random
 import re
 import itertools
+import time
 
 from gym import spaces
 from gym import utils
@@ -348,7 +349,12 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
   
   def step_discrete(self, a):
     """Take discrete step by teleporting and then push."""
-    self.do_simulation(list(np.array(a[1]) * 1.1), int(self.frame_skip * 6.0))
+    start_time = time.time()
+    print(self.physics.data.time)
+    self.do_simulation(list(np.array(a[1]) * 1.1), int(self.frame_skip * 10.0))
+    print(self.physics.data.time)
+    end_time = time.time()
+    print('Elapsed time: ', end_time - start_time)
   
   def step_continuous(self, a):
     """Take a continuous version of step discrete."""
@@ -377,7 +383,7 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     """Sample a random scene base on current viewing angle."""
     if collision:
       return gs.generate_fixed_scene_struct(self.c2w, self.num_object,
-                                      obj_pos=[[0, 0, 0.1], [0.2, 0.1, 0.1]])
+                                      obj_pos=[[0, 0, 0.1], [0.2, 0.1, 0.1]]) # , [0.2, -0.2, 0.1]
     if self.variable_scene_content:
       return gs.generate_scene_struct(self.c2w, self.min_dist, self.max_dist, self.num_object,
                                       self.clevr_metadata)
@@ -554,16 +560,21 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     object_idx = action[0]
     velocity = self.get_velocity_from_ctrl(action[1])
     time = self.get_time_from_frames(n_frames)
+    direction = self.get_direction_from_ctrl(action[1])
     
-    return "You then apply a velocity of {}units/seconds in the direction {} on the {} sphere. Spheres can collide together but the velocity and the direction of the {} sphere doesn't change.".format(velocity, time, COLORS[object_idx], COLORS[object_idx])
+    return "You then apply a velocity of {}units/seconds in the direction {} on the {} sphere for {} seconds. Spheres can collide together but the velocity and the direction of the {} sphere doesn't change.".format(velocity, direction, COLORS[object_idx], time, COLORS[object_idx])
     
   def get_velocity_from_ctrl(self, ctrl):
     # TODO
-    return 0
+    return 1
   
   def get_time_from_frames(self, n_frames):
     # TODO
-    return 0
+    return 0.5
+  
+  def get_direction_from_ctrl(self, n_frames):
+    # TODO
+    return 'behind'
 
   def _update_description(self, custom_n=None):
     """Update the text description of the current scene."""
