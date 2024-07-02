@@ -40,6 +40,7 @@ from utils.xml_utils import convert_scene_to_xml
 import cv2
 import mujoco_env as mujoco_env  # custom mujoco_env
 from dm_control import mujoco
+from copy import deepcopy
 
 file_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -86,7 +87,7 @@ four_cardinal_vectors_names = ['front', 'behind', 'left', 'right']
 
 class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
   
-  def __init__(self, top_down_view=False):
+  def __init__(self, top_down_view=False, seed=None):
 
     utils.EzPickle.__init__(self)
     self.min_dist = -0.5
@@ -121,6 +122,7 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                    "left": (self.obj_radius*(-2.0), 0),
                    "front": (0, self.obj_radius*2.0),
                    "behind": (0, self.obj_radius*(-2.0))}
+    self.rng = random.Random(seed)
 
     train, test = load_utils.load_all_question(), None
 
@@ -172,6 +174,7 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     # sample a random scene and struct
     self.scene_graph, self.scene_struct = self.sample_random_scene()
+    self.initial_scene_graph, self.initial_scene_struct = deepcopy(self.scene_graph), deepcopy(self.scene_struct)
 
     # generate initial set of description from the scene graph
     self.description_num = description_num
@@ -293,7 +296,7 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         candidates = self.all_questions
       else:
         candidates = self.valid_questions
-      random.shuffle(candidates)
+      self.rng.shuffle(candidates)
       false_question_count = 0
 
       for q, p in candidates:
@@ -305,7 +308,7 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
           currently_false.append((q, p, fixed_object_idx, fixed_object_loc))
           false_question_count += 1
 
-      random.shuffle(currently_false)
+      self.rng.shuffle(currently_false)
 
     if goal:
       full_answer = self.answer_question(goal, True)
@@ -384,10 +387,10 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
   def sample_random_scene(self):
     """Sample a random scene base on current viewing angle."""
     if self.variable_scene_content:
-      return gs.generate_scene_struct(self.c2w, self.min_dist, self.max_dist, self.num_object,
+      return gs.generate_scene_struct(self.c2w, self.min_dist, self.max_dist, self.rng, self.num_object,
                                       self.clevr_metadata)
     else:
-      return gs.generate_scene_struct(self.c2w, self.min_dist, self.max_dist, self.num_object)
+      return gs.generate_scene_struct(self.c2w, self.min_dist, self.max_dist, self.rng, self.num_object)
     
   def get_description(self):
     """Update and return the current scene description."""
@@ -594,24 +597,33 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     
     if(not(obj_pos is None)):
       """Reset with a fixed configuration."""
-
       self.scene_graph, self.scene_struct = gs.generate_fixed_scene_struct(self.c2w, self.num_object, obj_pos)
 
-      # Generate initial set of description from the scene graph.
-      self.descriptions, self.full_descriptions = None, None
-      self._update_description()
-      self.curr_step = 0
-
-      curr_scene_xml = convert_scene_to_xml(
-            self.scene_graph,
-            agent=self.agent_type,
-            checker_board=self.checker_board)
-
-      self.load_xml_string(curr_scene_xml)
-
-      self._update_object_description()
-
-      return self.get_obs()
     else:
+      # reset to initial config (not random, just what we started with)
+      self.scene_graph, self.scene_struct = deepcopy(self.initial_scene_graph), deepcopy(self.initial_scene_struct)
+
       
-      raise NotImplementedError("NEED TO IMPLEMEN RANDOM RESET")
+    # Generate initial set of description from the scene graph.
+    self.descriptions, self.full_descriptions = None, None
+    self._update_description()
+    self.curr_step = 0
+
+    curr_scene_xml = convert_scene_to_xml(
+          self.scene_graph,
+          agent=self.agent_type,
+          checker_board=self.checker_board)
+
+    self.load_xml_string(curr_scene_xml)
+
+    self._update_object_description()
+
+    return self.get_obs()
+      
+
+  def get_placement_actions(self):
+    return list(self.grid_placement_directions.keys())
+  
+  def shape_name(self, obj_num):
+    # print("scene graph: ", self.scene_graph[0])
+    return self.scene_graph[obj_num]['color'] + " " + self.scene_graph[obj_num]['shape']

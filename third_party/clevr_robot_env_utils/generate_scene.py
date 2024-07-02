@@ -36,7 +36,7 @@ def camera_transformation_from_pose(azimutal, elevation):
   return r, np.linalg.inv(r)
 
 
-def generate_scene_struct(c2w, min_dist, max_dist, num_object=3, metadata=None):
+def generate_scene_struct(c2w, min_dist, max_dist, rng, num_object=3, metadata=None):
   """Generate a random scene struct."""
   # This will give ground-truth information about the scene and its objects
   scene_struct = {
@@ -66,7 +66,7 @@ def generate_scene_struct(c2w, min_dist, max_dist, num_object=3, metadata=None):
 
   # Now make some random objects
   # objects = add_random_objects(scene_struct, num_object, metadata=metadata)
-  objects = add_objects_grid(num_object, min_dist, max_dist)
+  objects = add_objects_grid(num_object, min_dist, max_dist, rng)
   scene_struct['objects'] = objects
   scene_struct['relationships'] = compute_relationship(scene_struct)
   return objects, scene_struct
@@ -81,7 +81,7 @@ def no_overlap(new_x, new_y, positions, radius):
 def is_within_bounds(x, y, min_dist, max_dist):
   return min_dist <= x <= max_dist and min_dist <= y <= max_dist
 
-def add_objects_grid(num_objects, min_dist, max_dist, metadata=None, grid_obj_radius=0.1):
+def add_objects_grid(num_objects, min_dist, max_dist, rng, metadata=None, grid_obj_radius=0.1):
   positions = []
   objects = []
   
@@ -97,24 +97,24 @@ def add_objects_grid(num_objects, min_dist, max_dist, metadata=None, grid_obj_ra
   
 
   # Place the first object randomly within bounds
-  x = random.uniform(min_dist, max_dist)
-  y = random.uniform(min_dist, max_dist)
+  x = rng.uniform(min_dist, max_dist)
+  y = rng.uniform(min_dist, max_dist)
   # allow for spawning objects in a variety of 2 unit x and y directions. 
   list_grid_dirs = [(x, y) for x in [0, grid_obj_radius*2.0, grid_obj_radius*4.0] for y in [0, grid_obj_radius*2.0, grid_obj_radius*4.0] if not (x == 0 and y == 0)]
   
   for i in range(num_objects):
-    size_name, r = random.choice(size_mapping)
-    shape_name, shape = random.choice(shape_mapping)
+    size_name, r = rng.choice(size_mapping)
+    shape_name, shape = rng.choice(shape_mapping)
     if not metadata:
       color_name, color = color_mapping[i]
     else:
-      color_name, color = random.choice(color_mapping)
-    mat_name = random.choice(material_mapping)
+      color_name, color = rng.choice(color_mapping)
+    mat_name = rng.choice(material_mapping)
     
     # First object
     if i == 0:
       positions.append((x, y, r))
-      theta = 360.0 * random.random()
+      theta = 360.0 * rng.random()
       objects.append({
           'shape': shape,
           'shape_name': shape_name,
@@ -129,7 +129,7 @@ def add_objects_grid(num_objects, min_dist, max_dist, metadata=None, grid_obj_ra
       
     last_x, last_y, _ = positions[-1]
     
-    random.shuffle(list_grid_dirs)
+    rng.shuffle(list_grid_dirs)
 
     for dx, dy in list_grid_dirs:
       new_x = last_x + dx
@@ -138,7 +138,7 @@ def add_objects_grid(num_objects, min_dist, max_dist, metadata=None, grid_obj_ra
         break
         
     positions.append((new_x, new_y, r))
-    theta = 360.0 * random.random()
+    theta = 360.0 * rng.random()
     objects.append({
       'shape': shape,
       'shape_name': shape_name,
