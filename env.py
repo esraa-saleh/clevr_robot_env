@@ -24,7 +24,6 @@ import json
 import os
 import re
 import itertools
-import random
 import math
 
 from gym import spaces
@@ -532,9 +531,9 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     false_q = [q for q in questions_answers if q[1] is False]
     num_true_questions = len(true_q)
     
-    selected_false_q = random.sample(false_q, num_true_questions)
+    selected_false_q = self.rng.sample(false_q, num_true_questions)
     filtered_array = true_q + selected_false_q
-    random.shuffle(filtered_array)
+    self.rng.shuffle(filtered_array)
     
     return filtered_array
   
@@ -551,8 +550,8 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     if step_type == "kinematic":
       movement_directions = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
       directions_choices = [[1, 0, 0], [0, 1, 0], [1, 1, 0], [-1, 0, 0], [0, -1, 0], [-1, -1, 0], [1, -1, 0], [-1, 1, 0]]
-      obj_index = random.randint(0, len(directions) - 1)
-      movement_directions[obj_index] = random.choice(directions_choices)
+      obj_index = self.rng.randint(0, len(directions) - 1)
+      movement_directions[obj_index] = self.rng.choice(directions_choices)
       velocities  = [0] * self.num_object
       velocities[obj_index] = 1
       init_pos = self.scene_struct['objects'][obj_index]['3d_coords']
@@ -589,7 +588,7 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     return data_dict
   
   def get_kinematics_info(self, init_pos, final_pos, direction):
-    n_seconds = random.randint(1, 5)
+    n_seconds = self.rng.randint(1, 5)
     distance = math.sqrt((final_pos[0] - init_pos[0])**2 + (final_pos[1] - init_pos[1])**2)
     velocity = round(distance/n_seconds, 2)
     cardinal_direction = []
