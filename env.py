@@ -546,7 +546,8 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     
     description, colors_leftout = self.get_coordinates_description()
     rgb = self.render(mode='rgb_array')
-    
+    rgb_state_images = [rgb]
+        
     if step_type == "kinematic":
       movement_directions = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
       directions_choices = [[1, 0, 0], [0, 1, 0], [1, 1, 0], [-1, 0, 0], [0, -1, 0], [-1, -1, 0], [1, -1, 0], [-1, 1, 0]]
@@ -560,7 +561,9 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
       velocity, direction, time = self.get_kinematics_info(init_pos, final_pos, movement_directions[obj_index])
       
       description.append('The {} sphere has the velocity {}unit/sec in the direction {} for {} seconds. Objects can pass through each other without touching.'.format(colors[obj_index], velocity, direction, time))
-    
+      rgb_after_change = self.render(mode='rgb_array')
+      rgb_state_images.append(rgb_after_change)
+      
     elif(step_type == "teleport"):
             
       placed = False
@@ -580,10 +583,19 @@ class ClevrGridEnv(mujoco_env.MujocoEnv, utils.EzPickle):
       
       if(tries == max_tries):
         raise NotImplementedError("TODO: Need to deal with the low chance of tries not being enough for a teleport action placement!")
-       
+      
+      obj1_shape = self.scene_graph[obj1_idx]["shape"]
+      color_obj1 = self.scene_graph[obj1_idx]["color"]
+      obj2_shape = self.scene_graph[obj2_idx]["shape"]
+      color_obj2 = self.scene_graph[obj2_idx]["color"]
+      
+      description.append('Imagine picking up and placing the {} {} 1 unit {} of the {} {}.'.format(color_obj1, obj1_shape, relation, color_obj2, obj2_shape))
+      rgb_after_change = self.render(mode='rgb_array')
+      rgb_state_images.append(rgb_after_change)
+      
     questions_answers = self.generate_llm_questions_answers(colors, direct_comb, directions, colors_leftout)
     filtered_questions_answers = self.filter_questions_by_true(questions_answers)
-    data_dict[len(data_dict)] = {'description': description, 'image': rgb, 'questions': [q[0] for q in filtered_questions_answers], 'answers': [a[1] for a in filtered_questions_answers]}
+    data_dict[len(data_dict)] = {'description': description, 'image': rgb_state_images, 'questions': [q[0] for q in filtered_questions_answers], 'answers': [a[1] for a in filtered_questions_answers]}
     
     return data_dict
   

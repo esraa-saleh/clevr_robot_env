@@ -40,11 +40,12 @@ def save_images(raw_path, data_dict):
     if not os.path.exists(raw_path):
         os.makedirs(raw_path)
         
-    for idx, rgb in enumerate(rgbs):
-        image_path = os.path.join(raw_path, f'{task_name}_scene_{idx}.png')
-        im = Image.fromarray(rgb)
-        im.save(image_path)
-        data_dict[idx]['image_path'] = f'{raw_path}/{task_name}_scene_{idx}.png'
+    for idx, rgb_state_images in enumerate(rgbs):
+        for idx_state, one_rgb in enumerate(rgb_state_images):
+            image_path = os.path.join(raw_path, f'{task_name}_scene_{idx}_state_{idx_state}.png')
+            im = Image.fromarray(one_rgb)
+            im.save(image_path)
+            data_dict[idx]['image_path'] = f'{raw_path}/{task_name}_scene_{idx}_state_{idx_state}.png'
 
 
 class LLMDataset(Dataset):
